@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/TabloWindows.Core/TabloWindows.Core.csproj" />
+  <Project Path="src/TabloWindows/TabloWindows.csproj" />
+</Solution>

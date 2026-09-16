@@ -1,0 +1,47 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Tablo for Windows"
+           Manufacturer="Kevin Saye"
+           Version="1.0.0"
+           UpgradeCode="e963c4db-72e2-45a7-8461-a85d8f20aac9"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <SummaryInformation Description="Tablo for Windows — a player for the Tablo 4th-generation DVR" Manufacturer="Kevin Saye"/>
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Tablo for Windows is already installed."/>
+    <MediaTemplate EmbedCab="yes"/>
+
+    <!-- Uses the exe's own embedded icon for Add/Remove Programs and the shortcut. -->
+    <Icon Id="AppIcon" SourceFile="publish\TabloWindows.exe"/>
+    <Property Id="ARPPRODUCTICON" Value="AppIcon"/>
+    <Property Id="ARPHELPLINK" Value="https://github.com/ksaye/tablo-windows"/>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="TabloWindows"/>
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppShortcutFolder" Name="Tablo for Windows"/>
+    </StandardDirectory>
+
+    <!-- All published files (self-contained app + LibVLC natives), auto-harvested. -->
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="publish\**"/>
+    </ComponentGroup>
+
+    <!-- Start Menu shortcut -->
+    <Component Id="AppShortcut" Directory="AppShortcutFolder" Guid="370e7f19-e7f7-4a1e-bc83-df01106b62c4">
+      <Shortcut Id="StartShortcut" Name="Tablo for Windows"
+                Target="[INSTALLFOLDER]TabloWindows.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="AppIcon"/>
+      <RemoveFolder Id="RemoveShortcutFolder" On="uninstall"/>
+      <RegistryValue Root="HKCU" Key="Software\TabloWindows" Name="installed"
+                     Type="integer" Value="1" KeyPath="yes"/>
+    </Component>
+
+    <Feature Id="Main" Title="Tablo for Windows" Level="1">
+      <ComponentGroupRef Id="AppFiles"/>
+      <ComponentRef Id="AppShortcut"/>
+    </Feature>
+  </Package>
+</Wix>
