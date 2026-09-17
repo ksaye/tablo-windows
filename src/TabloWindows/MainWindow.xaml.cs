@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using TabloWindows.Services;
 using TabloWindows.ViewModels;
@@ -30,6 +31,8 @@ public partial class MainWindow : Window
         {
             App.Trace("Window Loaded: setting VideoView.MediaPlayer");
             VideoView.MediaPlayer = _vm.Player.MediaPlayer;
+            for (var i = 0; i < MultiViewViewModel.MaxPanes; i++)
+                MultiViewVideo(i).MediaPlayer = _vm.MultiView.Panes[i].Player;
             App.Trace("VideoView.MediaPlayer set; auto-login begin");
             try { await _vm.TryAutoLoginAsync(); App.Trace("auto-login returned"); }
             catch (Exception ex) { App.Trace("auto-login threw: " + ex); }
@@ -38,6 +41,15 @@ public partial class MainWindow : Window
         Closing += OnClosing;
 
         KeyDown += OnKeyDown;
+        _vm.MultiView.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MultiViewViewModel.PaneCount)) LayoutMultiView(_vm.MultiView.PaneCount);
+            if (e.PropertyName == nameof(MultiViewViewModel.IsOpen))
+            {
+                if (!_vm.MultiView.IsOpen) ExitFullScreen();
+                else RefreshVideoSurface();
+            }
+        };
         // Preview, so the player's keys win over whichever overlay button has keyboard focus:
         // otherwise the arrows just walk focus along the button row and Space/Enter press it.
         PreviewKeyDown += OnPlayerKeyDown;
@@ -59,6 +71,11 @@ public partial class MainWindow : Window
     /// </summary>
     private async void OnPlayerKeyDown(object sender, KeyEventArgs e)
     {
+        if (_vm.MultiView.IsOpen)
+        {
+            OnMultiViewKeyDown(e);
+            return;
+        }
         if (!_vm.PlayerOpen) return;
         switch (e.Key)
         {
@@ -89,12 +106,60 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>Multi-view: ← → step the sound between panes, 1-4 pick a pane directly.</summary>
+    private void OnMultiViewKeyDown(KeyEventArgs e)
+    {
+        var mv = _vm.MultiView;
+        switch (e.Key)
+        {
+            case Key.Left: mv.StepSound(-1); break;
+            case Key.Right: mv.StepSound(+1); break;
+            case >= Key.D1 and <= Key.D4: mv.SetSound(e.Key - Key.D1); break;
+            case >= Key.NumPad1 and <= Key.NumPad4: mv.SetSound(e.Key - Key.NumPad1); break;
+            default: return;
+        }
+        e.Handled = true;
+    }
+
+    private LibVLCSharp.WPF.VideoView MultiViewVideo(int i) => i switch
+    {
+        0 => MvVideo0, 1 => MvVideo1, 2 => MvVideo2, _ => MvVideo3
+    };
+
+    private Border MultiViewPane(int i) => i switch
+    {
+        0 => MvPane0, 1 => MvPane1, 2 => MvPane2, _ => MvPane3
+    };
+
+    /// <summary>
+    /// Place the panes on the 2x4 layout grid: two side by side, three as two above one centred
+    /// below, four as a 2x2. Every pane spans two of the four columns, which is what lets the third
+    /// of three sit in the middle.
+    /// </summary>
+    private void LayoutMultiView(int count)
+    {
+        (int Row, int Col, int RowSpan)[] cells = count switch
+        {
+            2 => [(0, 0, 2), (0, 2, 2)],
+            3 => [(0, 0, 1), (0, 2, 1), (1, 1, 1)],
+            _ => [(0, 0, 1), (0, 2, 1), (1, 0, 1), (1, 2, 1)],
+        };
+        for (var i = 0; i < cells.Length; i++)
+        {
+            var pane = MultiViewPane(i);
+            Grid.SetRow(pane, cells[i].Row);
+            Grid.SetColumn(pane, cells[i].Col);
+            Grid.SetRowSpan(pane, cells[i].RowSpan);
+            Grid.SetColumnSpan(pane, 2);
+        }
+    }
+
     private void FullScreen_Click(object sender, RoutedEventArgs e) => ToggleFullScreen();
 
     private void ToggleFullScreen()
     {
         // Only meaningful while the player is showing.
-        if (!_vm.PlayerOpen) return;
+        if (!_vm.PlayerOpen && !_vm.MultiView.IsOpen) return;
         if (_isFullScreen) ExitFullScreen(); else EnterFullScreen();
     }
 
@@ -163,10 +228,32 @@ public partial class MainWindow : Window
     {
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            VideoView.Visibility = Visibility.Hidden;
-            VideoView.UpdateLayout();
-            VideoView.Visibility = Visibility.Visible;
-            VideoView.InvalidateVisual();
+            var views = new List<LibVLCSharp.WPF.VideoView> { VideoView };
+            if (_vm.MultiView.IsOpen)
+                for (var i = 0; i < _vm.MultiView.PaneCount; i++) views.Add(MultiViewVideo(i));
+            foreach (var view in views)
+            {
+                view.Visibility = Visibility.Hidden;
+                view.UpdateLayout();
+                view.Visibility = Visibility.Visible;
+                view.InvalidateVisual();
+            }
+
+            // Multi-view panes also keep stale pixels in their letterbox after a resize until VLC lays
+            // out its picture again, which a momentary aspect-ratio change forces. Off the UI thread:
+            // these are calls into the players.
+            if (_vm.MultiView.IsOpen)
+            {
+                var players = _vm.MultiView.Panes.Where(p => p.InUse).Select(p => p.Player).ToList();
+                Task.Run(async () =>
+                {
+                    foreach (var player in players)
+                        try { player.AspectRatio = "16:10"; } catch { /* ignore */ }
+                    await Task.Delay(80);
+                    foreach (var player in players)
+                        try { player.AspectRatio = null; } catch { /* ignore */ }
+                });
+            }
         }), System.Windows.Threading.DispatcherPriority.Background);
     }
 
@@ -217,6 +304,7 @@ public partial class MainWindow : Window
     {
         // Detach the player from the VideoView before libvlc is torn down to avoid a shutdown hang.
         VideoView.MediaPlayer = null;
+        for (var i = 0; i < MultiViewViewModel.MaxPanes; i++) MultiViewVideo(i).MediaPlayer = null;
         _vm.Dispose();
     }
 }

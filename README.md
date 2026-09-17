@@ -18,6 +18,9 @@ DVR, with no server in between.
   - **Pause, rewind and fast-forward live TV.** Everything since you tuned the channel stays
     seekable; the heading shows how far behind live you are.
   - **Change channel with ↑ / ↓**, the way a TV remote does.
+- **Multi-view** — 2, 3 or 4 live channels at once, with the sound from whichever one you pick
+  (click its name, or press ← → or 1–4). Each channel is decoded by the PC itself, so there is
+  no server involved.
 - **Recordings** — artwork, play, export and delete.
 - **Guide** — a 14-day grid. Pick a programme to watch it now, or record the episode or the whole
   series.
@@ -30,6 +33,10 @@ DVR, with no server in between.
 | Guide | Recordings |
 |---|---|
 | ![Guide](docs/images/guide.png) | ![Recordings](docs/images/recordings.png) |
+
+Multi-view, four channels; the yellow border marks the one you are hearing:
+
+![Multi-view](docs/images/multi-view.png)
 
 ## Install
 
@@ -53,6 +60,9 @@ While something is playing:
 | **F11** or double-click | Full screen |
 | **Esc** | Leave full screen |
 
+In multi-view: **← / →** move the sound to the previous / next channel, **1–4** pick one directly,
+**F11** full screen.
+
 ## Your account
 
 The app signs in to Tablo's own cloud service, exactly as the official app does, and then talks
@@ -71,7 +81,11 @@ press **Refresh**. Running several Tablo apps against one DVR at once can make i
 or refuse connections until it is power-cycled.
 
 Every live channel and every recording being played uses one of the DVR's tuners until playback
-stops.
+stops — in multi-view, one per antenna channel (free streaming channels use none). A Tablo QUAD
+has four, so a four-channel multi-view leaves none for recordings.
+
+Multi-view decodes every channel on the PC. With hardware video decoding that is light work; on a
+PC without it, four HD broadcast channels can keep several CPU cores busy.
 
 ## Building from source
 

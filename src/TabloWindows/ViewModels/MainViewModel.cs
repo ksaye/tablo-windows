@@ -8,7 +8,7 @@ using TabloWindows.Services;
 
 namespace TabloWindows.ViewModels;
 
-public enum Section { Recordings, LiveTv, Guide, Exports }
+public enum Section { Recordings, LiveTv, MultiView, Guide, Exports }
 
 public sealed partial class MainViewModel : ObservableObject, IDisposable
 {
@@ -35,6 +35,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public RecordingsViewModel Recordings { get; }
     public LiveTvViewModel LiveTv { get; }
     public GuideViewModel Guide { get; }
+    public MultiViewViewModel MultiView { get; }
     public ExportsViewModel Exports { get; }
     public PlayerViewModel Player { get; }
     public UpdateService Updater { get; } = new();
@@ -42,6 +43,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public bool IsRecordings => CurrentSection == Section.Recordings;
     public bool IsLiveTv => CurrentSection == Section.LiveTv;
     public bool IsGuide => CurrentSection == Section.Guide;
+    public bool IsMultiView => CurrentSection == Section.MultiView;
     public bool IsExports => CurrentSection == Section.Exports;
 
     public MainViewModel()
@@ -55,6 +57,13 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         Recordings = new RecordingsViewModel(_client, PlayAsync, Exports.EnqueueAsync);
         LiveTv = new LiveTvViewModel(_client, PlayAsync);
         Guide = new GuideViewModel(_client, PlayAsync);
+        MultiView = new MultiViewViewModel(_libvlc, _client, LiveTv);
+        // Both hold tuners: starting multi-view closes an open player first.
+        MultiView.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MultiViewViewModel.IsOpen) && MultiView.IsOpen && PlayerOpen)
+                ClosePlayer();
+        };
 
         var saved = _creds.Load();
         if (saved is not null)
@@ -72,6 +81,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsRecordings));
         OnPropertyChanged(nameof(IsLiveTv));
         OnPropertyChanged(nameof(IsGuide));
+        OnPropertyChanged(nameof(IsMultiView));
         OnPropertyChanged(nameof(IsExports));
     }
 
@@ -182,6 +192,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         Player.Stop();
         PlayerOpen = false;
+        MultiView.Stop();
         IsLoggedIn = false;
         Devices.Clear();
         _creds.Clear();
@@ -200,6 +211,12 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     {
         CurrentSection = Section.Guide;
         if (Guide.Rows.Count == 0) await Guide.LoadAsync();
+    }
+    [RelayCommand]
+    private async Task ShowMultiView()
+    {
+        CurrentSection = Section.MultiView;
+        await MultiView.LoadAsync();
     }
     [RelayCommand] private void ShowExports() => CurrentSection = Section.Exports;
     [RelayCommand] private void RefreshRecordings() => _ = Recordings.LoadAsync();
@@ -272,12 +289,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     // ---- playback bridge passed to child VMs ----
     private async Task PlayAsync(string path, string title, bool live)
     {
+        MultiView.Stop();
         PlayerOpen = true;
         await Player.PlayAsync(path, title, live);
     }
 
     public void Dispose()
     {
+        MultiView.Dispose();
         Player.Dispose();
         _libvlc.Dispose();
     }

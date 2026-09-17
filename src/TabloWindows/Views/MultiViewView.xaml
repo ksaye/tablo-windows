@@ -1,0 +1,98 @@
+<UserControl x:Class="TabloWindows.Views.MultiViewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:TabloWindows.ViewModels"
+             d:DataContext="{d:DesignInstance vm:MultiViewViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+    <Grid Margin="28,22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" LastChildFill="False">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                <TextBlock Text="Multi-view" Style="{StaticResource H1}"/>
+                <TextBlock Text="{Binding SelectedCount, StringFormat={}{0} selected}" Style="{StaticResource MutedText}"
+                           VerticalAlignment="Bottom" Margin="12,0,0,4"/>
+            </StackPanel>
+            <Button Content="▶  Start multi-view" DockPanel.Dock="Right" Style="{StaticResource AccentButton}"
+                    Command="{Binding StartCommand}"/>
+            <Button Content="Clear" DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Margin="0,0,10,0"
+                    Command="{Binding ClearSelectionCommand}"/>
+        </DockPanel>
+
+        <TextBlock Grid.Row="1" Style="{StaticResource MutedText}" Margin="0,6,0,14" TextWrapping="Wrap"
+                   Text="Pick 2–4 live channels to watch at once. Each antenna channel uses a tuner, so nothing else can record on those while multi-view is running."/>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Choices}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:MultiViewChoice}">
+                        <Button Width="168" Height="132" Margin="0,0,14,14" Cursor="Hand"
+                                Command="{Binding DataContext.ToggleCommand,
+                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="b" Style="{StaticResource Card}">
+                                        <Grid Margin="14">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="*"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <Image Grid.Row="0" Source="{Binding Channel.LogoUrl}" Stretch="Uniform"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center" MaxHeight="52"/>
+                                            <!-- Pane number, in the order picked. -->
+                                            <Border Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                    Width="26" Height="26" CornerRadius="13" Background="{StaticResource Accent}"
+                                                    Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="{Binding Order}" FontWeight="Bold" Foreground="White"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Row="1">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Channel.Number}" FontWeight="Bold" FontSize="15"/>
+                                                    <TextBlock Text="{Binding Channel.Badge}" Margin="8,0,0,0"
+                                                               FontSize="10.5" VerticalAlignment="Center"
+                                                               Foreground="{StaticResource Accent}"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Channel.CallSign}" Style="{StaticResource MutedText}"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding Channel.NowPlaying}" FontSize="11.5" Margin="0,3,0,0"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="{StaticResource Text}"
+                                                           Visibility="{Binding Channel.NowPlaying,
+                                                               Converter={StaticResource NullToVis}}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                        </Trigger>
+                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                            <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                            <Setter TargetName="b" Property="BorderThickness" Value="2"/>
+                                        </DataTrigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Background="#990F1216"
+                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+            <TextBlock Text="Loading channels…" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       FontSize="15" Foreground="{StaticResource Muted}"/>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,7 +1,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="Tablo for Windows"
            Manufacturer="Kevin Saye"
-           Version="1.0.0"
+           Version="1.1.0"
            UpgradeCode="e963c4db-72e2-45a7-8461-a85d8f20aac9"
            Scope="perMachine"
            Compressed="yes">
