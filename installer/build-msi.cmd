@@ -11,8 +11,8 @@ dotnet publish ..\src\TabloWindows\TabloWindows.csproj -c Release -r win-x64 --s
 if errorlevel 1 exit /b 1
 
 echo === Building MSI with WiX ===
-wix build TabloWindows.wxs -arch x64 -o TabloWindows-1.1.0.msi
+wix build TabloWindows.wxs -arch x64 -o TabloWindows-1.1.1.msi
 if errorlevel 1 exit /b 1
 
-echo === Done: %~dp0TabloWindows-1.1.0.msi ===
-dir TabloWindows-1.1.0.msi
+echo === Done: %~dp0TabloWindows-1.1.1.msi ===
+dir TabloWindows-1.1.1.msi

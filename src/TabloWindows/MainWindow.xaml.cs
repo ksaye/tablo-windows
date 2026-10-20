@@ -71,6 +71,12 @@ public partial class MainWindow : Window
     /// </summary>
     private async void OnPlayerKeyDown(object sender, KeyEventArgs e)
     {
+        if (e.Key == Key.M && (_vm.PlayerOpen || _vm.MultiView.IsOpen))
+        {
+            _vm.IsMuted = !_vm.IsMuted;
+            e.Handled = true;
+            return;
+        }
         if (_vm.MultiView.IsOpen)
         {
             OnMultiViewKeyDown(e);

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.1 — 2026-10-20
+
+- **Fixed: playback could have no sound.** Multi-view silenced the panes you were not listening
+  to with LibVLC's mute, but every player in the app shares one Windows audio session, so that
+  muted the whole app in the Windows volume mixer - and Windows remembers it, so ordinary
+  playback stayed silent on later launches. Panes now go quiet by switching their audio track
+  off, and playback clears a mute left behind by 1.1.0.
+- **Mute button** (and the M key) in the player and in multi-view, next to Full Screen and Stop.
+  It holds across channel changes and sound switches, and every launch starts unmuted.
+
 ## 1.1.0 — 2026-09-17
 
 - **Multi-view**: watch 2, 3 or 4 live channels at once, laid out side by side, two over one, or

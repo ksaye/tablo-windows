@@ -64,6 +64,11 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         _client = client;
         MediaPlayer = new MediaPlayer(_libvlc) { EnableHardwareDecoding = true };
         MediaPlayer.Playing += (_, _) => OnUi(() => { IsPlaying = true; IsLoading = false; StatusMessage = ""; });
+        // Windows keeps one volume-mixer entry for the app and remembers if it was muted; in 1.1.0
+        // multi-view muted it (see MultiViewPane), leaving every later programme silent.
+        // So once the audio output exists, set mute to what the Mute button says - which also
+        // clears a mute left behind. Off the event thread, like every LibVLC call.
+        MediaPlayer.Playing += (_, _) => Task.Run(() => { try { MediaPlayer.Mute = _muted; } catch { } });
         MediaPlayer.Paused += (_, _) => OnUi(() => IsPlaying = false);
         MediaPlayer.Stopped += (_, _) => OnUi(() => IsPlaying = false);
         // A weak OTA signal shows up as an error or a frozen picture — recover instead of dying.
@@ -86,6 +91,15 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     /// "Not Responding". Live TV hit this within minutes, when the stream first ended.
     /// </summary>
     private void TriggerRecover(string reason) => _ = Task.Run(() => RecoverAsync(reason));
+
+    private volatile bool _muted;
+
+    /// <summary>The Mute button. Kept here too, because each new stream starts its audio unmuted.</summary>
+    public void SetMuted(bool muted)
+    {
+        _muted = muted;
+        Task.Run(() => { try { MediaPlayer.Mute = muted; } catch { } });
+    }
 
     public async Task PlayAsync(string path, string title, bool live)
     {

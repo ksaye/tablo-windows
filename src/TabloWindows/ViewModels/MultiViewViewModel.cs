@@ -29,11 +29,41 @@ public sealed partial class MultiViewPane : ObservableObject
     public MultiViewPane(LibVLC libvlc, int index)
     {
         Index = index;
-        Player = new MediaPlayer(libvlc) { EnableHardwareDecoding = true, Mute = true };
-        // VLC resets mute when a stream's audio output starts, so apply it again once playing.
-        // Off the event thread: LibVLC holds its event lock while raising this.
-        Player.Playing += (_, _) => Task.Run(() => Player.Mute = !HasSound);
+        Player = new MediaPlayer(libvlc) { EnableHardwareDecoding = true };
+        // A silent pane has its audio track switched off rather than being muted. Every LibVLC
+        // player in the app shares ONE Windows audio session, so Mute on any pane muted the
+        // whole app - and Windows remembers a muted session, which left ordinary playback
+        // silent on every later launch. The stream picks its own track when it starts, so this
+        // is re-applied each time one is selected. Off the event thread: LibVLC holds its
+        // event lock while raising this.
+        Player.ESSelected += (_, e) =>
+        {
+            if (e.Type == TrackType.Audio && (e.Id != -1) != HasSound) Task.Run(ApplySound);
+        };
     }
+
+    /// <summary>Turn this pane's sound on or off to match <see cref="HasSound"/>. Not from a LibVLC event.</summary>
+    internal void ApplySound()
+    {
+        try
+        {
+            if (!HasSound)
+            {
+                if (Player.AudioTrack != -1) Player.SetAudioTrack(-1);
+                return;
+            }
+            if (Player.AudioTrack == -1)
+            {
+                var track = Player.AudioTrackDescription.Where(t => t.Id != -1).Select(t => (int?)t.Id).FirstOrDefault();
+                if (track is int id) Player.SetAudioTrack(id);
+            }
+            Player.Mute = Muted;
+        }
+        catch { /* the stream is starting or stopping; the next ESSelected applies it */ }
+    }
+
+    /// <summary>The Mute button, applied to whichever pane has the sound.</summary>
+    internal volatile bool Muted;
 
     public int Index { get; }
     public int Number => Index + 1;
@@ -147,7 +177,6 @@ public sealed partial class MultiViewViewModel : ObservableObject, IDisposable
             var pane = Panes[i];
             pane.InUse = i < picks.Count;
             pane.HasSound = i == 0;
-            pane.Player.Mute = i != 0;
             if (!pane.InUse) { pane.Path = ""; continue; }
             pane.Path = picks[i].Channel.Path;
             pane.Label = picks[i].Channel.WatchTitle;
@@ -196,7 +225,17 @@ public sealed partial class MultiViewViewModel : ObservableObject, IDisposable
         foreach (var pane in Panes)
         {
             pane.HasSound = pane.Index == index;
-            pane.Player.Mute = pane.Index != index;
+            if (pane.InUse) Task.Run(pane.ApplySound);
+        }
+    }
+
+    /// <summary>The Mute button: silences the pane with the sound without moving the sound.</summary>
+    public void SetMuted(bool muted)
+    {
+        foreach (var pane in Panes)
+        {
+            pane.Muted = muted;
+            if (pane.InUse && pane.HasSound) Task.Run(pane.ApplySound);
         }
     }
 

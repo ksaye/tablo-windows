@@ -167,12 +167,14 @@
                             Command="{Binding Player.PlayPauseCommand}"/>
                     <Button Content="30s  ⏩" Style="{StaticResource GhostButton}" Margin="10,0,0,0"
                             Command="{Binding Player.SkipForwardCommand}"/>
+                    <Button Content="{Binding MuteText}" Style="{StaticResource GhostButton}" MinWidth="112"
+                            Command="{Binding ToggleMuteCommand}" Margin="10,0,0,0"/>
                     <Button Content="⛶  Full Screen" Style="{StaticResource GhostButton}" Margin="10,0,0,0"
                             Click="FullScreen_Click"/>
                     <Button Content="⏹  Stop" Style="{StaticResource GhostButton}" Margin="10,0,0,0"
                             Command="{Binding ClosePlayerCommand}"/>
                 </StackPanel>
-                <TextBlock Text="Space pause · ← → skip 10s · ↑ ↓ change channel (live) · F11 or double-click for full screen · Esc to exit"
+                <TextBlock Text="Space pause · ← → skip 10s · ↑ ↓ change channel (live) · M mute · F11 or double-click for full screen · Esc to exit"
                            Style="{StaticResource MutedText}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
             </StackPanel>
         </Grid>
@@ -365,11 +367,14 @@
 
             <StackPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,10,0,14">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Content="⛶  Full Screen" Style="{StaticResource GhostButton}" Click="FullScreen_Click"/>
+                    <Button Content="{Binding MuteText}" Style="{StaticResource GhostButton}" MinWidth="112"
+                            Command="{Binding ToggleMuteCommand}"/>
+                    <Button Content="⛶  Full Screen" Style="{StaticResource GhostButton}" Margin="10,0,0,0"
+                            Click="FullScreen_Click"/>
                     <Button Content="⏹  Stop" Style="{StaticResource GhostButton}" Margin="10,0,0,0"
                             Command="{Binding MultiView.StopCommand}"/>
                 </StackPanel>
-                <TextBlock Text="Click a channel's name, or press ← → or 1–4, to hear it · F11 for full screen · Esc to exit"
+                <TextBlock Text="Click a channel's name, or press ← → or 1–4, to hear it · M mute · F11 for full screen · Esc to exit"
                            Style="{StaticResource MutedText}" HorizontalAlignment="Center" Margin="0,8,0,0"/>
             </StackPanel>
         </Grid>

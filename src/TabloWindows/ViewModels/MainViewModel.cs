@@ -27,6 +27,25 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] private Section _currentSection = Section.Recordings;
     [ObservableProperty] private bool _playerOpen;
 
+    /// <summary>
+    /// The Mute button (or M). Not saved: every launch starts with sound, so a mute left on
+    /// can never pass for an app that has lost its audio.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MuteText))]
+    private bool _isMuted;
+
+    public string MuteText => IsMuted ? "🔇  Unmute" : "🔊  Mute";
+
+    partial void OnIsMutedChanged(bool value)
+    {
+        Player.SetMuted(value);
+        MultiView.SetMuted(value);
+    }
+
+    [RelayCommand]
+    private void ToggleMute() => IsMuted = !IsMuted;
+
     // ---- device selection ----
     public ObservableCollection<TabloDevice> Devices { get; } = new();
     [ObservableProperty] private TabloDevice? _selectedDevice;
